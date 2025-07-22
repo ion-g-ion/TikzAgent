@@ -1,0 +1,178 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tikz-agent"
+version = "0.1.0"
+description = "A LangGraph-based agentic AI workflow for generating, compiling, and reviewing TikZ diagrams using large language models"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "TikzAgent Contributors"}
+]
+maintainers = [
+    {name = "TikzAgent Contributors"}
+]
+keywords = ["tikz", "latex", "ai", "langchain", "langgraph", "diagrams", "workflow"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: LaTeX",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.2.0",
+    "langchain-openai>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+all = [
+    "langchain-google-genai>=1.0.0",
+    "langchain-mistralai>=0.1.0",
+    "langchain-groq>=0.1.0",
+    "streamlit>=1.28.0",
+]
+google = ["langchain-google-genai>=1.0.0"]
+mistral = ["langchain-mistralai>=0.1.0"]
+groq = ["langchain-groq>=0.1.0"]
+demo = [
+    "streamlit>=1.28.0",
+    "streamlit-drawable-canvas>=0.1.0",
+    "PIL"
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+tikz-agent = "TikzAgent.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/TikzAgent"
+Repository = "https://github.com/yourusername/TikzAgent"
+Documentation = "https://github.com/yourusername/TikzAgent#readme"
+Issues = "https://github.com/yourusername/TikzAgent/issues"
+
+[tool.setuptools]
+packages = ["TikzAgent"]
+
+[tool.setuptools.package-data]
+TikzAgent = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "langgraph.*",
+    "langchain.*",
+    "langchain_core.*",
+    "langchain_openai.*",
+    "langchain_anthropic.*",
+    "langchain_google_genai.*",
+    "langchain_mistralai.*",
+    "langchain_groq.*",
+]
+ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "E501",  # line too long (handled by black)
+    "W503",  # line break before binary operator
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    ".tox",
+]
+
+[tool.coverage.run]
+source = ["TikzAgent"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+] 
