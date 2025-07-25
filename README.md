@@ -4,13 +4,12 @@ A LangGraph-based agentic AI workflow for generating, compiling, and reviewing T
 
 ## Features
 
-- **🎨 Generator Node**: Generates TikZ code based on user requests
-- **🔧 Compiler Node**: Validates and analyzes TikZ code for errors
-- **👁️ Reviewer Node**: Reviews output quality and decides on revisions
-- **🔄 Iterative Refinement**: Automatically improves code through multiple iterations
+- **🤖 Multi-Agent System**: Intelligent workflow with specialized agents that collaborate: **Generate** → **Compile** → **Review**
 - **🤖 Multi-LLM Support**: Works with OpenAI, Anthropic, Google, and other providers
-- **📝 CLI Interface**: Easy-to-use command-line interface
+- **📝 CLI Interface**: Easy-to-use command-line interface with script entry point
 - **⚡ Async Support**: Both synchronous and asynchronous execution
+- **🎨 Interactive Demo**: Streamlit-based web interface for easy experimentation
+- **🔧 LaTeX Integration**: Built-in LaTeX compilation and PDF/PNG conversion tools
 
 ## Architecture
 
@@ -23,7 +22,7 @@ Generator → Compiler → Reviewer
 ```
 
 1. **Generator**: Creates TikZ code based on user requests or revision feedback
-2. **Compiler**: Validates the generated code for syntax errors and issues
+2. **Compiler**: Validates the generated code for syntax errors and issues using LaTeX compilation
 3. **Reviewer**: Evaluates quality and determines if revisions are needed
 
 The reviewer can either:
@@ -32,15 +31,39 @@ The reviewer can either:
 
 ## Installation
 
+### Prerequisites
+
+Make sure you have LaTeX installed on your system:
+- **Linux**: `sudo apt-get install texlive-latex-extra texlive-tikz-extra`
+- **macOS**: Install MacTeX from [https://www.tug.org/mactex/](https://www.tug.org/mactex/)
+- **Windows**: Install MiKTeX from [https://miktex.org/](https://miktex.org/)
+
+For PNG conversion (optional), install ImageMagick:
+- **Linux**: `sudo apt-get install imagemagick`
+- **macOS**: `brew install imagemagick`
+- **Windows**: Download from [https://imagemagick.org/](https://imagemagick.org/)
+
+### Install TikZ Agent
+
 1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd TikzAgent
 ```
 
-2. Install dependencies:
+2. Install the package:
 ```bash
-pip install -r requirements.txt
+# Basic installation
+pip install -e .
+
+# With demo dependencies
+pip install -e .[demo]
+
+# With all optional dependencies
+pip install -e .[all]
+
+# Development installation
+pip install -e .[dev]
 ```
 
 3. Set up your API keys:
@@ -53,6 +76,115 @@ export ANTHROPIC_API_KEY="your_anthropic_api_key"
 
 # For Google
 export GOOGLE_API_KEY="your_google_api_key"
+```
+
+## Docker Installation
+
+For a containerized setup with LaTeX and Python already configured:
+
+### Quick Docker Setup
+
+1. **Clone and build**:
+```bash
+git clone <repository-url>
+cd TikzAgent
+docker build -t tikz-agent .
+```
+
+2. **Run with environment variables**:
+```bash
+# Basic usage (runs on port 8501)
+docker run -p 8501:8501 \
+  -e OPENAI_API_KEY="your_openai_api_key" \
+  tikz-agent
+
+# Custom port and multiple providers
+docker run -p 3000:3000 \
+  -e PORT=3000 \
+  -e OPENAI_API_KEY="your_openai_api_key" \
+  -e ANTHROPIC_API_KEY="your_anthropic_api_key" \
+  -e GOOGLE_API_KEY="your_google_api_key" \
+  tikz-agent
+```
+
+3. **Or use Docker Compose** (recommended):
+```bash
+# Set your API keys in environment
+export OPENAI_API_KEY="your_openai_api_key"
+export ANTHROPIC_API_KEY="your_anthropic_api_key"  # optional
+export GOOGLE_API_KEY="your_google_api_key"        # optional
+export PORT=8501  # optional, defaults to 8501
+
+# Run with compose
+docker-compose up --build
+```
+
+4. **Or use convenience scripts**:
+```bash
+# Using the provided shell script
+export OPENAI_API_KEY="your_key"
+./docker-run.sh
+
+# Using Make commands
+make build          # Build the image
+make run           # Run interactively  
+make run-detached  # Run in background
+make logs          # View logs
+make stop          # Stop container
+make help          # Show all commands
+```
+
+### Docker Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PORT` | Streamlit server port | `8501` | No |
+| `OPENAI_API_KEY` | OpenAI API key | `""` | Optional* |
+| `ANTHROPIC_API_KEY` | Anthropic API key | `""` | Optional* |
+| `GOOGLE_API_KEY` | Google AI API key | `""` | Optional* |
+
+*At least one API key is required to use the application.
+
+**Tip**: Create a `.env` file in the project root with your API keys:
+```bash
+# .env file example
+PORT=8501
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+GOOGLE_API_KEY=your_google_api_key_here
+```
+
+### Docker Features
+
+- ✅ **Pre-installed LaTeX**: Based on `texlive/texlive:latest` with full TikZ support
+- ✅ **Python 3.10**: Ready-to-use Python environment
+- ✅ **ImageMagick**: For PNG conversion support
+- ✅ **Security**: Runs as non-root user
+- ✅ **Health Checks**: Built-in container health monitoring
+- ✅ **Volume Support**: Mount `/app/output` for file persistence
+
+### Advanced Docker Usage
+
+```bash
+# Run with output volume for file persistence
+docker run -p 8501:8501 \
+  -v $(pwd)/output:/app/output \
+  -e OPENAI_API_KEY="your_key" \
+  tikz-agent
+
+# Run in detached mode with restart policy
+docker run -d \
+  --name tikz-agent \
+  --restart unless-stopped \
+  -p 8501:8501 \
+  -e OPENAI_API_KEY="your_key" \
+  tikz-agent
+
+# Check logs
+docker logs tikz-agent
+
+# Stop container
+docker stop tikz-agent
 ```
 
 ## Quick Start - Streamlit Demo
@@ -84,20 +216,23 @@ The demo provides:
 
 ### Command Line Interface
 
-The easiest way to use the TikZ Agent is through the CLI:
+After installation, you can use the CLI through the installed script:
 
 ```bash
-# Basic usage
-python TikzAgent/cli.py "Create a binary tree with 7 nodes"
+# Basic usage (using installed script)
+tikz-agent "Create a binary tree with 7 nodes"
+
+# Or run directly
+python -m TikzAgent.cli "Create a binary tree with 7 nodes"
 
 # Use a different provider
-python TikzAgent/cli.py "Create a flowchart" --provider anthropic --model claude-3-sonnet-20240229
+tikz-agent "Create a flowchart" --provider anthropic --model claude-3-sonnet-20240229
 
 # Save output to file
-python TikzAgent/cli.py "Create a neural network diagram" --output diagram.tikz
+tikz-agent "Create a neural network diagram" --output diagram.tikz
 
 # Verbose output with custom settings
-python TikzAgent/cli.py "Create a UML class diagram" --verbose --max-iterations 5 --temperature 0.5
+tikz-agent "Create a UML class diagram" --verbose --max-iterations 5 --temperature 0.5
 ```
 
 ### Programmatic Usage
@@ -109,7 +244,7 @@ from TikzAgent.workflow import create_tikz_workflow
 
 async def main():
     # Initialize LLM
-    llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+    llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
     
     # Create workflow
     workflow = create_tikz_workflow(llm, max_iterations=3)
@@ -130,7 +265,7 @@ from langchain_openai import ChatOpenAI
 from TikzAgent.workflow import create_tikz_workflow
 
 # Initialize LLM
-llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
 
 # Create workflow
 workflow = create_tikz_workflow(llm, max_iterations=3)
@@ -141,63 +276,97 @@ result = workflow.run_sync("Create a TikZ diagram showing a simple flowchart")
 print(f"Generated TikZ Code:\n{result['tikz_code']}")
 ```
 
+### Streaming Usage
+
+```python
+from langchain_openai import ChatOpenAI
+from TikzAgent.workflow import create_tikz_workflow
+
+# Initialize LLM
+llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+
+# Create workflow
+workflow = create_tikz_workflow(llm, max_iterations=3)
+
+# Stream through workflow steps
+for chunk in workflow.stream_sync("Create a neural network diagram"):
+    print(f"Node: {list(chunk.keys())[0]}")
+    # Process each step as it completes
+```
+
 ## Configuration
 
 ### Supported LLM Providers
 
-| Provider | Models | Environment Variable |
-|----------|---------|---------------------|
-| OpenAI | gpt-4, gpt-3.5-turbo, etc. | `OPENAI_API_KEY` |
-| Anthropic | claude-3-sonnet-20240229, etc. | `ANTHROPIC_API_KEY` |
-| Google | gemini-pro, etc. | `GOOGLE_API_KEY` |
+| Provider | Models | Environment Variable | Optional Dependency |
+|----------|---------|---------------------|-------------------|
+| OpenAI | gpt-4, gpt-3.5-turbo, etc. | `OPENAI_API_KEY` | (included) |
+| Anthropic | claude-3-sonnet-20240229, etc. | `ANTHROPIC_API_KEY` | (included) |
+| Google | gemini-pro, etc. | `GOOGLE_API_KEY` | `pip install -e .[google]` |
+| Mistral | mistral-large, etc. | `MISTRAL_API_KEY` | `pip install -e .[mistral]` |
+| Groq | llama2-70b, etc. | `GROQ_API_KEY` | `pip install -e .[groq]` |
 
 ### Parameters
 
-- **max_iterations**: Maximum number of revision cycles (default: 3)
+- **max_iterations**: Maximum number of revision cycles (default: 16)
 - **temperature**: LLM temperature setting (default: 0.7)
 - **model**: Specific model to use (varies by provider)
+
+## LaTeX and Figure Tools
+
+The package includes comprehensive LaTeX compilation and figure conversion tools:
+
+```python
+from TikzAgent.latex_tools import (
+    compile_latex_to_pdf,
+    Figure,
+    save_figure_to_file,
+    convert_pdf_figure_to_png,
+    convert_png_figure_to_pdf,
+    load_pdf_to_figure,
+    check_latex_installation
+)
+
+# Check LaTeX installation
+is_installed, version = check_latex_installation()
+print(f"LaTeX installed: {is_installed}, Version: {version}")
+
+# Compile LaTeX code
+success, message, figure = compile_latex_to_pdf(latex_code)
+
+# Convert between formats
+png_figure = convert_pdf_figure_to_png(pdf_figure)
+pdf_figure = convert_png_figure_to_pdf(png_figure)
+
+# Save figures
+save_figure_to_file(figure, "output.pdf")
+```
 
 ## Examples
 
 ### Basic Geometric Shapes
 ```bash
-python TikzAgent/cli.py "Create a pentagon with labeled vertices"
+tikz-agent "Create a pentagon with labeled vertices"
 ```
 
 ### Data Structures
 ```bash
-python TikzAgent/cli.py "Create a binary search tree with nodes containing values 1, 3, 5, 7, 9"
+tikz-agent "Create a binary search tree with nodes containing values 1, 3, 5, 7, 9"
 ```
 
 ### Flowcharts
 ```bash
-python TikzAgent/cli.py "Create a flowchart showing a simple decision-making process with start, decision, process, and end nodes"
+tikz-agent "Create a flowchart showing a simple decision-making process with start, decision, process, and end nodes"
 ```
 
 ### Neural Networks
 ```bash
-python TikzAgent/cli.py "Create a neural network diagram with 4 input nodes, 2 hidden layers with 6 and 4 nodes, and 2 output nodes"
+tikz-agent "Create a neural network diagram with 4 input nodes, 2 hidden layers with 6 and 4 nodes, and 2 output nodes"
 ```
 
 ### UML Diagrams
 ```bash
-python TikzAgent/cli.py "Create a UML class diagram showing inheritance between Animal, Dog, and Cat classes"
-```
-
-## Workflow State
-
-The workflow maintains state throughout execution:
-
-```python
-{
-    "messages": [],           # Conversation history
-    "tikz_code": "",         # Generated TikZ code
-    "compilation_result": "", # Compiler analysis
-    "review_result": "",     # Reviewer feedback
-    "needs_revision": False, # Whether revision is needed
-    "iteration_count": 0,    # Current iteration
-    "max_iterations": 3      # Maximum iterations
-}
+tikz-agent "Create a UML class diagram showing inheritance between Animal, Dog, and Cat classes"
 ```
 
 ## Error Handling
@@ -205,28 +374,51 @@ The workflow maintains state throughout execution:
 The workflow includes comprehensive error handling:
 
 - **API Key Validation**: Checks for required environment variables
-- **Compilation Errors**: Identifies TikZ syntax issues
+- **LaTeX Installation**: Verifies pdflatex availability
+- **Compilation Errors**: Identifies TikZ syntax issues with detailed feedback
 - **Iteration Limits**: Prevents infinite loops
 - **LLM Errors**: Handles API failures gracefully
 
 ## Development
 
-### Running Examples
+### Project Structure
 
-```bash
-# Run all examples
-python TikzAgent/example_usage.py
-
-# Run specific provider examples
-OPENAI_API_KEY=your_key python TikzAgent/example_usage.py
+```
+TikzAgent/
+├── TikzAgent/           # Main package
+│   ├── __init__.py      # Package exports
+│   ├── workflow.py      # Core LangGraph workflow
+│   ├── latex_tools.py   # LaTeX compilation tools
+│   └── cli.py          # Command-line interface
+├── test/               # Test files
+├── streamlit_demo.py   # Web demo interface
+├── run_demo.py        # Demo launcher
+├── pyproject.toml     # Package configuration
+└── requirements.txt   # Dependencies
 ```
 
 ### Testing
 
 ```bash
-pip install pytest pytest-asyncio
-pytest tests/
+# Install test dependencies
+pip install -e .[test]
+
+# Run tests
+pytest test/
+
+# Run with coverage
+pytest --cov=TikzAgent test/
 ```
+
+### Available Optional Dependencies
+
+- `[demo]`: Streamlit demo dependencies
+- `[google]`: Google AI support
+- `[mistral]`: Mistral AI support  
+- `[groq]`: Groq support
+- `[all]`: All optional dependencies
+- `[dev]`: Development tools (black, flake8, mypy, pre-commit)
+- `[test]`: Testing dependencies
 
 ## Contributing
 
@@ -234,7 +426,8 @@ pytest tests/
 2. Create a feature branch
 3. Make your changes
 4. Add tests
-5. Submit a pull request
+5. Run `black` and `flake8` for code formatting
+6. Submit a pull request
 
 ## License
 
@@ -255,17 +448,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    export OPENAI_API_KEY="your_api_key_here"
    ```
 
-2. **Import Errors**
+2. **LaTeX Not Installed**
    ```bash
-   pip install -r requirements.txt
+   # Ubuntu/Debian
+   sudo apt-get install texlive-latex-extra texlive-tikz-extra
+   
+   # macOS
+   brew install --cask mactex
    ```
 
-3. **Async Issues**
-   - Use `asyncio.run()` for async functions
-   - Use `run_sync()` method for synchronous execution
+3. **Import Errors**
+   ```bash
+   pip install -e .
+   ```
+
+4. **CLI Command Not Found**
+   ```bash
+   # Make sure package is installed
+   pip install -e .
+   
+   # Or run directly
+   python -m TikzAgent.cli "your request"
+   ```
+
+5. **Demo Dependencies Missing**
+   ```bash
+   pip install -e .[demo]
+   ```
 
 ### Getting Help
 
-- Check the [examples](TikzAgent/example_usage.py) for usage patterns
-- Review the [CLI help](TikzAgent/cli.py) for available options
+- Check the CLI help: `tikz-agent --help`
+- Test LaTeX installation: `python -c "from TikzAgent.latex_tools import check_latex_installation; print(check_latex_installation())"`
 - Open an issue for bugs or feature requests

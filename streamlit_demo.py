@@ -8,6 +8,10 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import asyncio
 import os
+import requests
+import json
+import webbrowser
+from urllib.parse import urlparse
 from typing import Optional, Dict, Any
 from io import BytesIO
 from datetime import datetime
@@ -32,6 +36,128 @@ try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 except ImportError:
     ChatGoogleGenerativeAI = None
+
+
+# OpenRouter constants
+OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
+OPENROUTER_BASE = "https://openrouter.ai"
+
+
+# Utility functions
+def get_url():
+    """Get the current app URL."""
+    try:
+        # Try to get URL from Streamlit context
+        from streamlit.web import cli as stcli
+        return "http://localhost:8501"  # Default for local development
+    except:
+        return "http://localhost:8501"
+
+
+def url_to_hostname(url):
+    """Extract hostname from URL."""
+    return urlparse(url).netloc or "localhost:8501"
+
+
+def open_page(url):
+    """Open a page in a new tab."""
+    webbrowser.open_new_tab(url)
+
+
+# OpenRouter functions
+def get_available_models():
+    """Get available models from the OpenRouter API."""
+    try:
+        response = requests.get(OPENROUTER_API_BASE + "/models")
+        response.raise_for_status()
+        models = json.loads(response.text)["data"]
+        
+        # Filter models that support image input, structured outputs, and tools
+        return [
+            model["id"] for model in models
+            if "image" in model.get("architecture", {}).get("input_modalities", [])
+            and "structured_outputs" in model.get("supported_parameters", [])
+            and "tools" in model.get("supported_parameters", [])
+        ]
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error getting models from API: {e}")
+        return []
+
+
+def handle_model_selection(available_models, selected_model, default_model):
+    """Handle the model selection process."""
+    # Determine the index of the selected model
+    if selected_model and selected_model in available_models:
+        selected_index = available_models.index(selected_model)
+    elif default_model in available_models:
+        selected_index = available_models.index(default_model)
+    else:
+        selected_index = 0
+    
+    selected_model = st.selectbox(
+        "Select a model", available_models, index=selected_index
+    )
+    return selected_model
+
+
+def exchange_code_for_api_key(code: str):
+    """Exchange authorization code for API key."""
+    st.info(f"Exchanging code for API key...")
+    try:
+        response = requests.post(
+            OPENROUTER_API_BASE + "/auth/keys",
+            json={"code": code},
+        )
+        response.raise_for_status()
+        # Clear query params
+        st.query_params.clear()
+        api_key = json.loads(response.text)["key"]
+        st.session_state["api_key"] = api_key
+        st.success("Successfully connected to OpenRouter!")
+        st.rerun()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error exchanging code for API key: {e}")
+
+
+def handle_openrouter_auth(default_model="gpt-4"):
+    """Handle OpenRouter authentication and model selection."""
+    # Check for authorization code in query params
+    code = st.query_params.get("code", None)
+    if code:
+        exchange_code_for_api_key(code)
+    
+    # Get stored API key and model
+    api_key = st.session_state.get("api_key")
+    selected_model = st.query_params.get("model", None) or st.session_state.get("model", None)
+    url = url_to_hostname(get_url())
+    
+    if not api_key:
+        if st.button(
+            "🔗 Connect OpenRouter",
+            use_container_width=True,
+            help="Click to authenticate with OpenRouter"
+        ):
+            auth_url = f"{OPENROUTER_BASE}/auth?callback_url=http://{url}"
+            open_page(auth_url)
+            st.info("Please complete authentication in the opened browser tab, then return here.")
+    else:
+        st.success("✅ Connected to OpenRouter")
+        if st.button("🚪 Log out", use_container_width=True):
+            if "api_key" in st.session_state:
+                del st.session_state["api_key"]
+            st.rerun()
+    
+    # Model selection
+    available_models = get_available_models() if api_key else []
+    if available_models:
+        selected_model = handle_model_selection(available_models, selected_model, default_model)
+        st.session_state["model"] = selected_model
+        st.query_params["model"] = selected_model
+    else:
+        selected_model = default_model
+    
+    return api_key, selected_model
+
 
 @st.dialog("Draw reference figure", width="large")
 def edit_figure():
@@ -157,7 +283,18 @@ def display_figure(figure: Figure) -> None:
 def initialize_llm(provider: str, api_key: str, model_name: str) -> Optional[Any]:
     """Initialize the selected LLM provider."""
     try:
-        if provider == "OpenAI" and ChatOpenAI:
+        if provider == "OpenRouter" and ChatOpenAI:
+            return ChatOpenAI(
+                model=model_name,
+                temperature=0.7,
+                openai_api_key=api_key,
+                openai_api_base=OPENROUTER_API_BASE,
+                default_headers={
+                    "HTTP-Referer": get_url(),
+                    "X-Title": "TikZ Agent Demo"
+                }
+            )
+        elif provider == "OpenAI" and ChatOpenAI:
             return ChatOpenAI(
                 model=model_name,
                 temperature=0.7,
@@ -220,46 +357,53 @@ def main():
     with st.sidebar:
         st.title("⚙️ Configuration")
         
-        # LLM Provider Selection
+        # LLM Provider Selection with OpenRouter as first option
         provider = st.selectbox(
             "Select LLM Provider",
-            ["OpenAI", "Anthropic", "Google"],
+            ["OpenRouter", "OpenAI", "Anthropic", "Google"],
             index=0
         )
         
-        # Model selection based on provider
-        if provider == "OpenAI":
-            model_options = ["gpt-4o", "gpt-4.1", "o3"]
-            default_model = "gpt-4o"
-        elif provider == "Anthropic":
-            model_options = ["claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
-            default_model = "claude-3-sonnet-20240229"
-        elif provider == "Google":
-            model_options = ["gemini-pro", "gemini-1.5-pro"]
-            default_model = "gemini-pro"
-        
-        model_name = st.selectbox(
-            "Select Model",
-            model_options,
-            index=0 if default_model == model_options[0] else 
-                  model_options.index(default_model) if default_model in model_options else 0
-        )
-        
-        # API Key input
-        api_key = st.text_input(
-            f"{provider} API Key",
-            type="password",
-            help=f"Enter your {provider} API key"
-        )
-        if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
+        if provider == "OpenRouter":
+            st.subheader("🔗 OpenRouter Authentication")
+            
+            # Handle OpenRouter authentication
+            api_key, model_name = handle_openrouter_auth(default_model="openai/gpt-4")
+            
+        else:
+            # Model selection based on provider
+            if provider == "OpenAI":
+                model_options = ["gpt-4.1", "o1", "o3", "gpt-4o"]
+                default_model = "gpt-4.1"
+            elif provider == "Anthropic":
+                model_options = ["claude-sonnet-4-20250514", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
+                default_model = "claude-3-sonnet-20240229"
+            elif provider == "Google":
+                model_options = ["gemini-pro", "gemini-1.5-pro", "gemini-2.5-flash"]
+                default_model = "gemini-pro"
+            
+            model_name = st.selectbox(
+                "Select Model",
+                model_options,
+                index=0 if default_model == model_options[0] else 
+                      model_options.index(default_model) if default_model in model_options else 0
+            )
+            
+            # API Key input for other providers
+            api_key = st.text_input(
+                f"{provider} API Key",
+                type="password",
+                help=f"Enter your {provider} API key"
+            )
+            if not api_key:
+                api_key = os.getenv(f"{provider.upper()}_API_KEY") or os.getenv("OPENAI_API_KEY")
         
         # Max iterations
         st.session_state.max_iterations = st.slider(
             "Max Iterations",
             min_value=1,
             max_value=16,
-            value=5,
+            value=8,
             help="Maximum number of revision iterations"
         )
         
@@ -290,11 +434,29 @@ def main():
                 st.error(f"❌ Failed to initialize {provider} LLM")
                 st.session_state.workflow = None
         elif not api_key:
-            st.warning("⚠️ Please provide an API key to initialize the workflow")
+            if provider == "OpenRouter":
+                st.info("🔗 Please connect to OpenRouter above to get started")
+            else:
+                st.warning("⚠️ Please provide an API key to initialize the workflow")
             st.session_state.workflow = None
         
+        if st.button("Clear session", use_container_width=True):
+            st.session_state.messages = []
+            st.session_state.code_history = []
+            st.session_state.figure_history = []
+            st.session_state.reference_figure = None
+            st.session_state.thread_id = str(datetime.now())
+
+        st.markdown("""---""")
         
-    
+        container_state_debug = st.empty()
+        with container_state_debug:
+            with st.popover("Graph state", icon="🔍").container(height=400):
+                if st.session_state.workflow:
+                    st.write(st.session_state.workflow.get_state(st.session_state.thread_id))
+                else:
+                    st.write("No workflow initialized")
+        
     # Main content area
    
     
@@ -311,7 +473,7 @@ def main():
             0: ":material/chevron_left:",
             1: ":material/chevron_right:",
         }
-        if st.session_state.get('figure_index', -1) >= 0:
+        if len(st.session_state.figure_history) > 0 and st.session_state.get('figure_index', -1) >= 0:
  
             selection = st.segmented_control(
                 "Figure navigation",
@@ -375,6 +537,13 @@ def main():
                     with messages_container:
                         display_message(dct)
                     st.session_state.messages.append(dct)
+                    
+                    with container_state_debug:
+                        with st.popover("Graph state", icon="🔍").container(height=400):
+                            if st.session_state.workflow:
+                                st.write(st.session_state.workflow.get_state(st.session_state.thread_id))
+                            else:
+                                st.write("No workflow initialized")
             
             state = st.session_state.workflow.get_state(st.session_state.thread_id)
             st.session_state.code_history.append(st.session_state.workflow.latex_code_body % state.get("tikz_code", ""))

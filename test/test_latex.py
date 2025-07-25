@@ -17,7 +17,7 @@ if status:
     with open("test.pdf", "wb") as f:
         f.write(fig.data)
         
-    llm = ChatOpenAI(model="o4-mini")
+    llm = ChatOpenAI(model="gpt-4o-mini")
 
 # Invoke the model with a Human message
     response = llm.invoke([SystemMessage(content="You are a helpful assistant that can analyze images and provide a description of the image."), 

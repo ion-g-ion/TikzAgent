@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  tikz-agent:
+    build: .
+    ports:
+      - "${PORT:-8501}:${PORT:-8501}"
+    environment:
+      - PORT=${PORT:-8501}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    volumes:
+      # Optional: Mount a directory for output files
+      - ./output:/app/output
+    restart: unless-stopped
+    container_name: tikz-agent-demo
+    
+    # Optional health check override
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8501}/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s 

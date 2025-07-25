@@ -1,0 +1,69 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+*.egg-info/
+build/
+dist/
+*.pdf
+*.png
+*.bmp
+test.pdf
+test.png
+test2.pdf
+canvas_figuremp.bmp
+
+# Test files (optional - uncomment if you don't want tests in container)
+# test/
+
+# Lock files (will be regenerated)
+uv.lock 

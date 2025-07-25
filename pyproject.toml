@@ -9,10 +9,10 @@ description = "A LangGraph-based agentic AI workflow for generating, compiling, 
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "TikzAgent Contributors"}
+    {name = "Ion Gabriel Ion", email = "ion.ion.gabriel@gmail.com"}
 ]
 maintainers = [
-    {name = "TikzAgent Contributors"}
+    {name = "Ion Gabriel Ion", email = "ion.ion.gabriel@gmail.com"}
 ]
 keywords = ["tikz", "latex", "ai", "langchain", "langgraph", "diagrams", "workflow"]
 classifiers = [
@@ -23,8 +23,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -32,7 +30,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Markup :: LaTeX",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "langgraph>=0.2.0",
     "langchain-core>=0.2.0",
@@ -54,7 +52,7 @@ groq = ["langchain-groq>=0.1.0"]
 demo = [
     "streamlit>=1.28.0",
     "streamlit-drawable-canvas>=0.1.0",
-    "PIL"
+    "pillow"
 ]
 dev = [
     "pytest>=7.0.0",
@@ -74,10 +72,9 @@ test = [
 tikz-agent = "TikzAgent.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/TikzAgent"
-Repository = "https://github.com/yourusername/TikzAgent"
-Documentation = "https://github.com/yourusername/TikzAgent#readme"
-Issues = "https://github.com/yourusername/TikzAgent/issues"
+Repository = "https://github.com/ion-g-ion/TikzAgent/"
+# Documentation = "https://github.com/yourusername/TikzAgent#readme"
+
 
 [tool.setuptools]
 packages = ["TikzAgent"]

@@ -8,7 +8,10 @@ import os
 import sys
 from typing import Optional
 
-from workflow import create_tikz_workflow
+try:
+    from TikzAgent.workflow import create_tikz_workflow
+except ImportError:
+    from .workflow import create_tikz_workflow
 
 
 def get_llm_from_provider(provider: str, model: str, temperature: float = 0.7):
@@ -51,7 +54,7 @@ def get_llm_from_provider(provider: str, model: str, temperature: float = 0.7):
 async def run_workflow(
     request: str,
     provider: str = "openai",
-    model: str = "gpt-4",
+    model: str = "gpt-4o",
     temperature: float = 0.7,
     max_iterations: int = 3,
     output_file: Optional[str] = None,
@@ -148,8 +151,8 @@ Examples:
     
     parser.add_argument(
         "--model",
-        default="gpt-4",
-        help="Model name (default: gpt-4)"
+        default="gpt-4o",
+        help="Model name (default: gpt-4o)"
     )
     
     parser.add_argument(
