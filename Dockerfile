@@ -10,26 +10,19 @@ ENV OPENAI_API_KEY=""
 ENV ANTHROPIC_API_KEY=""
 ENV GOOGLE_API_KEY=""
 
-# Install Python 3.10 and essential packages
+# Install Python 3.11 and essential packages (available in Debian 13)
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    curl \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y \
-    python3.10 \
-    python3.10-dev \
-    python3.10-distutils \
+    python3 \
+    python3-dev \
     python3-pip \
+    python3-venv \
+    curl \
     imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symbolic links for python and pip
-RUN ln -sf /usr/bin/python3.10 /usr/bin/python \
-    && ln -sf /usr/bin/python3.10 /usr/bin/python3
-
-# Install pip for Python 3.10
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+# Create virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Set working directory
 WORKDIR /app
@@ -43,8 +36,8 @@ COPY README.md LICENSE ./
 # Install the project and dependencies
 RUN pip install --no-cache-dir -e .[demo]
 
-# Create a non-root user for security
-RUN useradd -m -u 1000 tikzuser && chown -R tikzuser:tikzuser /app
+# Create a non-root user for security (using different UID)
+RUN useradd -m -u 1001 tikzuser && chown -R tikzuser:tikzuser /app
 USER tikzuser
 
 # Expose the port

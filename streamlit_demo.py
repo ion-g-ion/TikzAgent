@@ -282,35 +282,47 @@ def display_figure(figure: Figure) -> None:
 
 def initialize_llm(provider: str, api_key: str, model_name: str) -> Optional[Any]:
     """Initialize the selected LLM provider."""
+    
+    def model_supports_temperature(model_name: str) -> bool:
+        """Check if a model supports the temperature parameter."""
+        # OpenAI o-series models don't support temperature
+        if model_name.startswith('o1') or model_name.startswith('o3') or model_name == 'o1' or model_name == 'o3':
+            return False
+        return True
+    
     try:
+        # Determine if we should include temperature
+        include_temp = model_supports_temperature(model_name)
+        temp_kwargs = {"temperature": 0.7} if include_temp else {}
+        
         if provider == "OpenRouter" and ChatOpenAI:
             return ChatOpenAI(
                 model=model_name,
-                temperature=0.7,
                 openai_api_key=api_key,
                 openai_api_base=OPENROUTER_API_BASE,
                 default_headers={
                     "HTTP-Referer": get_url(),
                     "X-Title": "TikZ Agent Demo"
-                }
+                },
+                **temp_kwargs
             )
         elif provider == "OpenAI" and ChatOpenAI:
             return ChatOpenAI(
                 model=model_name,
-                temperature=0.7,
-                openai_api_key=api_key
+                openai_api_key=api_key,
+                **temp_kwargs
             )
         elif provider == "Anthropic" and ChatAnthropic:
             return ChatAnthropic(
                 model=model_name,
-                temperature=0.7,
-                anthropic_api_key=api_key
+                anthropic_api_key=api_key,
+                **temp_kwargs
             )
         elif provider == "Google" and ChatGoogleGenerativeAI:
             return ChatGoogleGenerativeAI(
                 model=model_name,
-                temperature=0.7,
-                google_api_key=api_key
+                google_api_key=api_key,
+                **temp_kwargs
             )
         else:
             return None
