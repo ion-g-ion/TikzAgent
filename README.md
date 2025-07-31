@@ -101,6 +101,7 @@ docker run -p 8501:8501 \
 # Custom port and multiple providers
 docker run -p 3000:3000 \
   -e PORT=3000 \
+  -e APP_URL="http://your-domain.com:3000" \
   -e OPENAI_API_KEY="your_openai_api_key" \
   -e ANTHROPIC_API_KEY="your_anthropic_api_key" \
   -e GOOGLE_API_KEY="your_google_api_key" \
@@ -114,6 +115,7 @@ export OPENAI_API_KEY="your_openai_api_key"
 export ANTHROPIC_API_KEY="your_anthropic_api_key"  # optional
 export GOOGLE_API_KEY="your_google_api_key"        # optional
 export PORT=8501  # optional, defaults to 8501
+export APP_URL="http://localhost:8501"  # optional, for OpenRouter callbacks
 
 # Run with compose
 docker-compose up --build
@@ -123,6 +125,7 @@ docker-compose up --build
 ```bash
 # Using the provided shell script
 export OPENAI_API_KEY="your_key"
+export APP_URL="http://localhost:8501"  # optional
 ./docker-run.sh
 
 # Using Make commands
@@ -139,16 +142,20 @@ make help          # Show all commands
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `PORT` | Streamlit server port | `8501` | No |
+| `APP_URL` | Application URL for OpenRouter callbacks (use internet-facing URL for deployments) | `""` | No |
 | `OPENAI_API_KEY` | OpenAI API key | `""` | Optional* |
 | `ANTHROPIC_API_KEY` | Anthropic API key | `""` | Optional* |
 | `GOOGLE_API_KEY` | Google AI API key | `""` | Optional* |
 
 *At least one API key is required to use the application.
 
+**Note**: When deploying to production or making the application accessible from the internet, set `APP_URL` to your public domain (e.g., `https://your-domain.com:8501`) rather than `localhost`. This is essential for OpenRouter authentication callbacks and other external integrations to work properly.
+
 **Tip**: Create a `.env` file in the project root with your API keys:
 ```bash
 # .env file example
 PORT=8501
+APP_URL=http://localhost:8501
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
@@ -170,6 +177,7 @@ GOOGLE_API_KEY=your_google_api_key_here
 docker run -p 8501:8501 \
   -v $(pwd)/output:/app/output \
   -e OPENAI_API_KEY="your_key" \
+  -e APP_URL="http://localhost:8501" \
   tikz-agent
 
 # Run in detached mode with restart policy
@@ -178,6 +186,7 @@ docker run -d \
   --restart unless-stopped \
   -p 8501:8501 \
   -e OPENAI_API_KEY="your_key" \
+  -e APP_URL="http://localhost:8501" \
   tikz-agent
 
 # Check logs
@@ -302,9 +311,9 @@ for chunk in workflow.stream_sync("Create a neural network diagram"):
 |----------|---------|---------------------|-------------------|
 | OpenAI | gpt-4, gpt-3.5-turbo, etc. | `OPENAI_API_KEY` | (included) |
 | Anthropic | claude-3-sonnet-20240229, etc. | `ANTHROPIC_API_KEY` | (included) |
+| OpenRouter | Various models via OpenRouter API | `OPENROUTER_API_KEY` | (included) |
 | Google | gemini-pro, etc. | `GOOGLE_API_KEY` | `pip install -e .[google]` |
-| Mistral | mistral-large, etc. | `MISTRAL_API_KEY` | `pip install -e .[mistral]` |
-| Groq | llama2-70b, etc. | `GROQ_API_KEY` | `pip install -e .[groq]` |
+
 
 ### Parameters
 

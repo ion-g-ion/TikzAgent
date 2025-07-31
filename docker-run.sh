@@ -8,6 +8,7 @@ set -e
 # Default values
 PORT=${PORT:-8501}
 IMAGE_NAME=${IMAGE_NAME:-tikz-agent}
+APP_URL=${APP_URL:-}
 
 echo "🐳 TikZ Agent Docker Runner"
 echo "=========================="
@@ -25,12 +26,13 @@ if ! docker image inspect $IMAGE_NAME &> /dev/null; then
 fi
 
 # Check for API keys
-if [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ]; then
+if [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ]; then
     echo "⚠️  Warning: No API keys found in environment variables."
     echo "   Please set at least one of:"
     echo "   - OPENAI_API_KEY"
     echo "   - ANTHROPIC_API_KEY" 
     echo "   - GOOGLE_API_KEY"
+    echo "   - OPENROUTER_API_KEY"
     echo ""
     echo "   Example:"
     echo "   export OPENAI_API_KEY='your_key_here'"
@@ -55,9 +57,11 @@ echo ""
 docker run --rm -it \
     -p $PORT:$PORT \
     -e PORT=$PORT \
+    -e APP_URL="$APP_URL" \
     -e OPENAI_API_KEY="$OPENAI_API_KEY" \
     -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
     -e GOOGLE_API_KEY="$GOOGLE_API_KEY" \
+    -e OPENROUTER_API_KEY="$OPENROUTER_API_KEY" \
     -v $(pwd)/output:/app/output \
     --name tikz-agent-temp \
     $IMAGE_NAME 

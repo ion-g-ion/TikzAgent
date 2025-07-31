@@ -4,11 +4,13 @@ FROM texlive/texlive:latest
 ENV PORT=8501
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV APP_URL=""
 
 # Optional API keys (can be overridden at runtime)
 ENV OPENAI_API_KEY=""
 ENV ANTHROPIC_API_KEY=""
 ENV GOOGLE_API_KEY=""
+ENV OPENROUTER_API_KEY=""
 
 # Install Python 3.11 and essential packages (available in Debian 13)
 RUN apt-get update && apt-get install -y \

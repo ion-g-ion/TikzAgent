@@ -4,6 +4,7 @@
 IMAGE_NAME ?= tikz-agent
 PORT ?= 8501
 CONTAINER_NAME ?= tikz-agent-demo
+APP_URL ?=
 
 .PHONY: help build run run-detached stop logs clean shell test-build
 
@@ -22,9 +23,11 @@ run:		## Run the container interactively
 	docker run --rm -it \
 		-p $(PORT):$(PORT) \
 		-e PORT=$(PORT) \
+		-e APP_URL="$(APP_URL)" \
 		-e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 		-e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 		-e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+		-e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
 		-v $(PWD)/output:/app/output \
 		--name $(CONTAINER_NAME)-temp \
 		$(IMAGE_NAME)
@@ -36,9 +39,11 @@ run-detached:	## Run the container in detached mode
 		--restart unless-stopped \
 		-p $(PORT):$(PORT) \
 		-e PORT=$(PORT) \
+		-e APP_URL="$(APP_URL)" \
 		-e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 		-e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 		-e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+		-e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
 		-v $(PWD)/output:/app/output \
 		--name $(CONTAINER_NAME) \
 		$(IMAGE_NAME)
@@ -85,8 +90,10 @@ check-env:	## Check environment variables
 	@echo "PORT: $(PORT)"
 	@echo "IMAGE_NAME: $(IMAGE_NAME)"
 	@echo "CONTAINER_NAME: $(CONTAINER_NAME)"
+	@echo "APP_URL: $(APP_URL)"
 	@echo ""
 	@echo "API Keys (set = ✅, not set = ❌):"
 	@if [ -n "$(OPENAI_API_KEY)" ]; then echo "OPENAI_API_KEY: ✅"; else echo "OPENAI_API_KEY: ❌"; fi
 	@if [ -n "$(ANTHROPIC_API_KEY)" ]; then echo "ANTHROPIC_API_KEY: ✅"; else echo "ANTHROPIC_API_KEY: ❌"; fi
-	@if [ -n "$(GOOGLE_API_KEY)" ]; then echo "GOOGLE_API_KEY: ✅"; else echo "GOOGLE_API_KEY: ❌"; fi 
+	@if [ -n "$(GOOGLE_API_KEY)" ]; then echo "GOOGLE_API_KEY: ✅"; else echo "GOOGLE_API_KEY: ❌"; fi
+	@if [ -n "$(OPENROUTER_API_KEY)" ]; then echo "OPENROUTER_API_KEY: ✅"; else echo "OPENROUTER_API_KEY: ❌"; fi 

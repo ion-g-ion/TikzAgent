@@ -49,26 +49,6 @@ class GenerationResult(BaseModel):
 class TikzAgentWorkflow:
     """LangGraph workflow for TikZ generation, compilation, and review."""
     
-    latex_code_body = """\\documentclass{standalone}
-\\usepackage{tikz}
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\usepackage{amsthm}
-\\usepackage{amsfonts}
-\\usepackage{amscd}
-\\usepackage{amsthm}
-\\usepackage{amssymb}
-\\usepackage{amsthm}
-\\usepackage{tikz-cd}
-\\usetikzlibrary{arrows,shapes,positioning,shadows,trees,calc}
-
-\\begin{document}
-\\begin{tikzpicture}
-%s
-\\end{tikzpicture}
-\\end{document}
-"""
-    
     def __init__(self, llm: BaseLLM, max_iterations: int = 16, checkpointer = InMemorySaver()):
         """
         Initialize the TikZ workflow.
@@ -127,15 +107,15 @@ You are an expert TikZ code generator. Generate clean, well-commented TikZ code 
                 
 Guidelines:
 - Use proper TikZ syntax and commands
-- Include necessary packages in comments
+- Include ALL necessary package imports (tikz, tikz libraries, etc.)
 - Make the code readable and well-structured
 - Focus on creating visually appealing diagrams
-- Return ONLY the TikZ code that goes inside \begin{tikzpicture} \end{tikzpicture}
-- Do NOT include \documentclass, \begin{document}, or other LaTeX document structure
-- The code will be wrapped in tikzpicture environment automatically
+- Return a COMPLETE LaTeX document including \documentclass, package imports, \begin{document}, tikzpicture environment, and \end{document}
+- Include all required TikZ libraries and packages needed for your diagram
+- Use appropriate document class and page setup for the diagram
 
 You must provide a structured response with:
-- tikz_code: The TikZ code to be compiled (without document structure)
+- tikz_code: The complete LaTeX document with all necessary imports and structure
 - scratch_pad: Any notes, reasoning, or thoughts about your approach"""
 
             # First iteration - use original request with multimodal content
@@ -178,12 +158,13 @@ Guidelines:
 - Fix any compilation errors mentioned
 - Address the reviewer's concerns
 - Improve the code quality and visual appeal
-- Return ONLY the TikZ code that goes inside \begin{tikzpicture} \end{tikzpicture}
-- Do NOT include \documentclass, \begin{document}, or other LaTeX document structure
-- The code will be wrapped in tikzpicture environment automatically
+- Return a COMPLETE LaTeX document including \documentclass, package imports, \begin{document}, tikzpicture environment, and \end{document}
+- Include all required TikZ libraries and packages needed for your diagram
+- Use appropriate document class and page setup for the diagram
+- Ensure all necessary packages are imported to fix compilation errors
 
 You must provide a structured response with:
-- tikz_code: The revised TikZ code to be compiled (without document structure)
+- tikz_code: The complete revised LaTeX document with all necessary imports and structure
 - scratch_pad: Any notes, reasoning, or thoughts about your revisions"""
 
             # Subsequent iterations - use review feedback with multimodal content
@@ -246,7 +227,7 @@ You must provide a structured response with:
         tikz_code = state["tikz_code"]
         
         # Create a complete LaTeX document with the TikZ code
-        latex_document = self.latex_code_body % tikz_code
+        latex_document = tikz_code
 
         # Actually compile the LaTeX document
         success, message, figure = compile_latex_to_pdf(latex_document)

@@ -41,7 +41,8 @@ except ImportError:
 # OpenRouter constants
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_BASE = "https://openrouter.ai"
-
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+FREE_MODELS = ["openrouter/horizon-alpha"]
 
 # Utility functions
 def get_url():
@@ -245,7 +246,7 @@ def display_message(message: dict) -> None:
             col_tmp1, col_tmp2 = st.columns(2)
             with col_tmp1:  
                 with st.popover("Generated Tikz code", icon="️💻"):
-                    st.markdown("```latex\n" + st.session_state.workflow.latex_code_body % message.get("tikz_code", "") + "\n```")
+                    st.markdown("```latex\n" + message.get("tikz_code", "") + "\n```")
             with col_tmp2:
                 with st.popover("️Generated figure", icon="🏙️"):
                     if message.get("compiled_figure", None):
@@ -268,7 +269,7 @@ def display_message(message: dict) -> None:
             st.markdown("**Scratchpad:**")
             st.markdown(message.get("scratch_pad", ""))
             st.markdown("**TikZ code:**")
-            st.markdown("```latex\n" + st.session_state.workflow.latex_code_body % message.get("tikz_code", "") + "\n```")
+            st.markdown("```latex\n" + message.get("tikz_code", "") + "\n```")
 
 def display_figure(figure: Figure) -> None:
     """Display the figure."""
@@ -295,7 +296,7 @@ def initialize_llm(provider: str, api_key: str, model_name: str) -> Optional[Any
         include_temp = model_supports_temperature(model_name)
         temp_kwargs = {"temperature": 0.7} if include_temp else {}
         
-        if provider == "OpenRouter" and ChatOpenAI:
+        if "OpenRouter" in provider and ChatOpenAI:
             return ChatOpenAI(
                 model=model_name,
                 openai_api_key=api_key,
@@ -370,9 +371,15 @@ def main():
         st.title("⚙️ Configuration")
         
         # LLM Provider Selection with OpenRouter as first option
+        provider_options = ["OpenRouter", "OpenAI", "Anthropic", "Google"]
+        
+        # Add Free OpenRouter option if API key is available
+        if OPENROUTER_API_KEY:
+            provider_options = ["Free OpenRouter"] + provider_options
+        
         provider = st.selectbox(
             "Select LLM Provider",
-            ["OpenRouter", "OpenAI", "Anthropic", "Google"],
+            provider_options,
             index=0
         )
         
@@ -381,6 +388,19 @@ def main():
             
             # Handle OpenRouter authentication
             api_key, model_name = handle_openrouter_auth(default_model="openai/gpt-4")
+            
+        elif provider == "Free OpenRouter":
+            st.subheader("🆓 Free OpenRouter Models")
+            
+            # Use environment API key
+            api_key = OPENROUTER_API_KEY
+            
+            # Model selection from free models
+            model_name = st.selectbox(
+                "Select Free Model",
+                FREE_MODELS,
+                index=0
+            )
             
         else:
             # Model selection based on provider
@@ -510,7 +530,7 @@ def main():
             with cols_tmp[1]:
                 st.write(f"**Latex code:**")
                 with st.container(border=True, height=600):
-                    st.markdown("```latex\n" + st.session_state.workflow.latex_code_body % figure.latex_code + "\n```")
+                    st.markdown("```latex\n" + figure.latex_code + "\n```")
         else:
             st.markdown("No figures generated yet")
         
@@ -558,7 +578,7 @@ def main():
                                 st.write("No workflow initialized")
             
             state = st.session_state.workflow.get_state(st.session_state.thread_id)
-            st.session_state.code_history.append(st.session_state.workflow.latex_code_body % state.get("tikz_code", ""))
+            st.session_state.code_history.append(state.get("tikz_code", ""))
             st.session_state.figure_history = state["figure_history"]
             st.session_state.figure_index = len(st.session_state.figure_history) - 1
             
