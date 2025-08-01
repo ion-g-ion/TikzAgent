@@ -11,6 +11,12 @@ A LangGraph-based agentic AI workflow for generating, compiling, and reviewing T
 - **🎨 Interactive Demo**: Streamlit-based web interface for easy experimentation
 - **🔧 LaTeX Integration**: Built-in LaTeX compilation and PDF/PNG conversion tools
 
+## Live Demo
+
+🌐 **Try it online**: A deployed version is available at [https://tikzagent.yonnss.org](https://tikzagent.yonnss.org)
+
+The live demo includes all the features of the local Streamlit version with multiple LLM providers and real-time TikZ diagram generation.
+
 ## Architecture
 
 The workflow consists of three sequential nodes connected in a graph:
@@ -47,7 +53,7 @@ For PNG conversion (optional), install ImageMagick:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/ion-g-ion/TikzAgent
 cd TikzAgent
 ```
 
@@ -86,7 +92,7 @@ For a containerized setup with LaTeX and Python already configured:
 
 1. **Clone and build**:
 ```bash
-git clone <repository-url>
+git clone https://github.com/ion-g-ion/TikzAgent
 cd TikzAgent
 docker build -t tikz-agent .
 ```
@@ -204,12 +210,6 @@ The fastest way to get started is with the interactive Streamlit demo:
 # Install with demo dependencies
 pip install -e .[demo]
 
-# Run the demo
-python run_demo.py
-```
-
-Or run directly:
-```bash
 streamlit run streamlit_demo.py
 ```
 
@@ -446,7 +446,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [LangGraph](https://github.com/langchain-ai/langgraph)
 - Uses [LangChain](https://github.com/langchain-ai/langchain) for LLM integration
-- Inspired by the need for automated TikZ diagram generation
 
 ## Troubleshooting
 

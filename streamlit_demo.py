@@ -47,12 +47,7 @@ FREE_MODELS = ["openrouter/horizon-alpha"]
 # Utility functions
 def get_url():
     """Get the current app URL."""
-    try:
-        # Try to get URL from Streamlit context
-        from streamlit.web import cli as stcli
-        return "http://localhost:8501"  # Default for local development
-    except:
-        return "http://localhost:8501"
+    return os.environ.get("APP_URL", "http://localhost:8501")
 
 
 def url_to_hostname(url):
