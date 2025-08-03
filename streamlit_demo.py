@@ -144,7 +144,7 @@ def handle_openrouter_auth(default_model="gpt-4"):
         ):
             auth_url = f"{OPENROUTER_BASE}/auth?callback_url=http://{url}"
             open_page(auth_url)
-            st.info("Please complete authentication in the opened browser tab, then return here.")
+            st.info(f"Please complete authentication in the opened browser tab, then return here. If this does not work, press the link {auth_url}.")
     else:
         st.success("✅ Connected to OpenRouter")
         if st.button("🚪 Log out", use_container_width=True):
