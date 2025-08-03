@@ -11,6 +11,7 @@ import os
 import requests
 import json
 import webbrowser
+import uuid
 from urllib.parse import urlparse
 from typing import Optional, Dict, Any
 from io import BytesIO
@@ -42,7 +43,7 @@ except ImportError:
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_BASE = "https://openrouter.ai"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-FREE_MODELS = ["openrouter/horizon-alpha"]
+
 
 # Utility functions
 def get_url():
@@ -61,20 +62,28 @@ def open_page(url):
 
 
 # OpenRouter functions
-def get_available_models():
+def get_available_models(free: bool = False):
     """Get available models from the OpenRouter API."""
     try:
         response = requests.get(OPENROUTER_API_BASE + "/models")
         response.raise_for_status()
         models = json.loads(response.text)["data"]
-        
-        # Filter models that support image input, structured outputs, and tools
-        return [
-            model["id"] for model in models
-            if "image" in model.get("architecture", {}).get("input_modalities", [])
-            and "structured_outputs" in model.get("supported_parameters", [])
-            and "tools" in model.get("supported_parameters", [])
-        ]
+        if free:
+            return [
+                model["id"] for model in models
+                if "image" in model.get("architecture", {}).get("input_modalities", [])
+                and "structured_outputs" in model.get("supported_parameters", [])
+                and "tools" in model.get("supported_parameters", [])
+                and all([float(v) < 1e-12 for v in model.get("pricing", {}).values()])
+            ]
+        else:
+            # Filter models that support image input, structured outputs, and tools
+            return [
+                model["id"] for model in models
+                if "image" in model.get("architecture", {}).get("input_modalities", [])
+                and "structured_outputs" in model.get("supported_parameters", [])
+                and "tools" in model.get("supported_parameters", [])
+            ]
     except requests.exceptions.RequestException as e:
         st.error(f"Error getting models from API: {e}")
         return []
@@ -238,14 +247,47 @@ def display_message(message: dict) -> None:
             st.markdown("**Response:**")
             st.markdown(message["review_result"])
             
-            col_tmp1, col_tmp2 = st.columns(2)
+            col_tmp1, col_tmp2, col_tmp3, col_tmp4 = st.columns(4)
             with col_tmp1:  
-                with st.popover("Generated Tikz code", icon="️💻"):
+                with st.popover("Generated Tikz code", icon="️💻", use_container_width=True):
                     st.markdown("```latex\n" + message.get("tikz_code", "") + "\n```")
             with col_tmp2:
-                with st.popover("️Generated figure", icon="🏙️"):
+                if message.get("tikz_code", ""):
+                    st.download_button(
+                        label="📥 Download Code",
+                        data=message.get("tikz_code", ""),
+                        file_name="tikz_diagram.tex",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key=f"download_code_{uuid.uuid4().hex}"
+                    )
+            with col_tmp3:
+                with st.popover("️Generated figure", icon="🏙️", use_container_width=True):
                     if message.get("compiled_figure", None):
                         display_figure(message["compiled_figure"])
+            with col_tmp4:
+                if message.get("compiled_figure", None):
+                    compiled_figure = message["compiled_figure"]
+                    if compiled_figure.type == "pdf":
+                        # For PDF figures, offer PDF download
+                        st.download_button(
+                            label="📥 Download Figure (PDF)",
+                            data=compiled_figure.data,
+                            file_name="tikz_diagram.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"download_pdf_{uuid.uuid4().hex}"
+                        )
+                        
+                    elif compiled_figure.type == "png":
+                        st.download_button(
+                            label="📥 Download Figure",
+                            data=compiled_figure.data,
+                            file_name="tikz_diagram.png",
+                            mime="image/png",
+                            use_container_width=True,
+                            key=f"download_png_{uuid.uuid4().hex}"
+                        )
     elif message["role"] == "reviewer":
         with st.expander("👁️ Reviewer"):
             st.markdown("**Review result:**")
@@ -390,10 +432,11 @@ def main():
             # Use environment API key
             api_key = OPENROUTER_API_KEY
             
+            print(get_available_models(free=True))
             # Model selection from free models
             model_name = st.selectbox(
                 "Select Free Model",
-                FREE_MODELS,
+                get_available_models(free=True),
                 index=0
             )
             
@@ -478,7 +521,7 @@ def main():
         
         container_state_debug = st.empty()
         with container_state_debug:
-            with st.popover("Graph state", icon="🔍").container(height=400):
+            with st.popover("Graph state", icon="🔍", use_container_width=True).container(height=400):
                 if st.session_state.workflow:
                     st.write(st.session_state.workflow.get_state(st.session_state.thread_id))
                 else:
@@ -489,6 +532,61 @@ def main():
     
     tab_chat, tab_reference, tab_generated = st.tabs(["Chat", "Reference figure", "Generated figures and code"])
 
+   
+    with tab_chat:
+        # Messages container with fixed height
+        messages_container = st.container(height=600)
+        with messages_container:
+            # Chat window
+            for message in st.session_state.messages:
+                display_message(message)
+
+        
+        col_input, col_button = st.columns([4, 1])
+        with col_input:
+            prompt = st.chat_input("What is on your mind?")
+        with col_button:
+            if st.button("✍🏼 Create sketch" if not st.session_state.reference_figure else "✍🏼 Edit sketch", use_container_width=True):
+                res = edit_figure()
+                
+        
+        # Chat input after the messages container
+        if prompt:
+            # Display user message in chat message container
+            user_message = {"role": "user", "content": prompt}
+            if st.session_state.reference_figure:
+                user_message["reference_figure"] = st.session_state.reference_figure
+            st.session_state.messages.append(user_message)
+            
+            with messages_container:
+                display_message(user_message)
+            
+            try:
+                for msgs in st.session_state.workflow.stream_sync(prompt, st.session_state.reference_figure, thread_id=st.session_state.thread_id):
+                    for key in msgs.keys():
+                        dct = msgs[key].copy()
+                        dct["role"] = key
+                        with messages_container:
+                            display_message(dct)
+                        st.session_state.messages.append(dct)
+                        
+                        with container_state_debug:
+                            with st.popover("Graph state", icon="🔍", use_container_width=True).container(height=400):
+                                if st.session_state.workflow:
+                                    st.write(st.session_state.workflow.get_state(st.session_state.thread_id))
+                                else:
+                                    st.write("No workflow initialized")
+                
+                state = st.session_state.workflow.get_state(st.session_state.thread_id)
+                st.session_state.code_history.append(state.get("tikz_code", ""))
+                st.session_state.figure_history = [convert_pdf_figure_to_png(fig) for fig in state["figure_history"]]
+                st.session_state.figure_index = len(st.session_state.figure_history) - 1
+            except Exception as e:
+                with st.sidebar:
+                    st.error(f"Error during workflow streaming: {e}")
+                    
+
+            
     with tab_reference:
         if st.session_state.reference_figure:
             display_figure(st.session_state.reference_figure)
@@ -529,55 +627,6 @@ def main():
         else:
             st.markdown("No figures generated yet")
         
-    with tab_chat:
-        # Messages container with fixed height
-        messages_container = st.container(height=600)
-        with messages_container:
-            # Chat window
-            for message in st.session_state.messages:
-                display_message(message)
-
-        
-        col_input, col_button = st.columns([4, 1])
-        with col_input:
-            prompt = st.chat_input("What is on your mind?")
-        with col_button:
-            if st.button("🛠️ Create figure" if not st.session_state.reference_figure else "🛠️ Edit figure", use_container_width=True):
-                res = edit_figure()
-                
-        
-        # Chat input after the messages container
-        if prompt:
-            # Display user message in chat message container
-            user_message = {"role": "user", "content": prompt}
-            if st.session_state.reference_figure:
-                user_message["reference_figure"] = st.session_state.reference_figure
-            st.session_state.messages.append(user_message)
-            
-            with messages_container:
-                display_message(user_message)
-            
-            for msgs in st.session_state.workflow.stream_sync(prompt, st.session_state.reference_figure, thread_id=st.session_state.thread_id):
-                for key in msgs.keys():
-                    dct = msgs[key].copy()
-                    dct["role"] = key
-                    with messages_container:
-                        display_message(dct)
-                    st.session_state.messages.append(dct)
-                    
-                    with container_state_debug:
-                        with st.popover("Graph state", icon="🔍").container(height=400):
-                            if st.session_state.workflow:
-                                st.write(st.session_state.workflow.get_state(st.session_state.thread_id))
-                            else:
-                                st.write("No workflow initialized")
-            
-            state = st.session_state.workflow.get_state(st.session_state.thread_id)
-            st.session_state.code_history.append(state.get("tikz_code", ""))
-            st.session_state.figure_history = state["figure_history"]
-            st.session_state.figure_index = len(st.session_state.figure_history) - 1
-            
-            
 
 if __name__ == "__main__":
     main() 

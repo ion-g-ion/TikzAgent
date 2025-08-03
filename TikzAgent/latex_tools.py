@@ -157,6 +157,7 @@ def convert_pdf_figure_to_png(pdf_figure: Figure, dpi: int = 300) -> Figure:
                 '-background', 'white',
                 '-alpha', 'remove',
                 '-quality', '100',
+                '-colors', '255',
                 str(pdf_file),
                 str(png_file)
             ], 
@@ -182,7 +183,7 @@ def convert_pdf_figure_to_png(pdf_figure: Figure, dpi: int = 300) -> Figure:
                 png_figure = Figure(
                     type="png",
                     data=png_content,
-                    latex_code=""
+                    latex_code=pdf_figure.latex_code
                 )
                 
                 return png_figure
