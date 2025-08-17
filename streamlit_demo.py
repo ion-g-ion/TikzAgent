@@ -185,15 +185,81 @@ def edit_figure():
        
     stroke_color = cols[2].color_picker("Stroke color hex: ")
     bg_color = cols[3].color_picker("Background color hex: ", "#eee")
-    bg_image = cols2[1].file_uploader("Background image:", type=["png", "jpg"])
+    bg_image = cols2[1].file_uploader("Upload reference image:", type=["png", "jpg", "jpeg", "pdf"])
     use_image = cols3[0].button("Use image")
     clear_canvas = cols3[1].button("Clear canvas")
     use_previous_as_background = cols3[2].button("Use previous")
     ratio = cols2[0].number_input("Ratio", min_value=0.5, max_value=2.0, value=1.5, step=0.1)
     
+    # Handle background image upload - directly set as reference figure and close modal
+    if bg_image is not None:
+        # Get file extension to determine processing method
+        file_extension = bg_image.name.lower().split('.')[-1]
+        
+        if file_extension == 'pdf':
+            # Handle PDF files
+            pdf_bytes = bg_image.getvalue()
+            pdf_figure = Figure(type="pdf", data=pdf_bytes, latex_code="")
+            # Convert PDF to PNG
+            png_figure = convert_pdf_figure_to_png(pdf_figure)
+            png_bytes = png_figure.data
+        else:
+            # Handle image files (jpg, jpeg, png)
+            img_bytes = bg_image.getvalue()
+            
+            # Open image with PIL and convert to PNG if needed
+            img = Image.open(BytesIO(img_bytes))
+            
+            # Convert to RGB if image has transparency (RGBA) or other modes
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Create white background for transparent images
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Convert to PNG bytes
+            png_buffer = BytesIO()
+            img.save(png_buffer, format='PNG')
+            png_bytes = png_buffer.getvalue()
+        
+        # Create Figure object and store in session state
+        st.session_state.reference_figure = Figure(
+            type="png",
+            data=png_bytes,
+            latex_code=""
+        )
+        st.rerun()
+    
     if clear_canvas:
         st.session_state.reference_figure = None
         st.rerun()
+    
+    # Handle use previous as background
+    if use_previous_as_background:
+        # Check if there are any figures in history
+        if (hasattr(st.session_state, 'figure_history') and 
+            len(st.session_state.figure_history) > 0):
+            
+            # Get the currently selected figure or the last one if no index is set
+            figure_index = st.session_state.get('figure_index', len(st.session_state.figure_history) - 1)
+            if figure_index >= 0 and figure_index < len(st.session_state.figure_history):
+                selected_figure = st.session_state.figure_history[figure_index]
+                
+                # Set the selected figure as the reference figure
+                st.session_state.reference_figure = Figure(
+                    type=selected_figure.type,
+                    data=selected_figure.data,
+                    latex_code=selected_figure.latex_code
+                )
+                st.rerun()
+            else:
+                st.error("No valid figure selected in history")
+        else:
+            st.info("No previous figures available to use as background")
         
     # Create a canvas component
     with container_canvas:
@@ -203,7 +269,7 @@ def edit_figure():
             stroke_width=stroke_width,
             stroke_color=stroke_color,
             background_color=bg_color,
-            background_image=Image.open(bg_image) if bg_image else None,
+            background_image=None,  # No longer use uploaded image as background
             update_streamlit=True,
             height=600/ratio,
             width=600,
@@ -213,6 +279,7 @@ def edit_figure():
             key="full_app",
             initial_drawing=st.session_state.get("last_canvas", None),
         )
+        
         
         if canvas_result.image_data is not None and use_image:
             st.session_state.last_canvas = canvas_result.json_data
